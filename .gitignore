@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual enf
+env/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
+data/raw/
+
+# OS
+.DS_Store
+Thumbs.db
+
+#Evitamos subir datos crudos
+# y basura en el sistema
