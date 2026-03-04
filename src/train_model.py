@@ -136,7 +136,6 @@ xgb_pipeline = Pipeline(
             "model",
             XGBClassifier(
                 eval_metric="logloss",
-                use_label_encoder=False,
                 random_state=42
             )
         )
@@ -190,3 +189,51 @@ if roc_xgb > roc_logistic:
     print("\nXGBoost performs better.")
 else:
     print("\nLogistic Regression performs better.")
+
+# ============================================================
+# 12) MODEL SELECTION & PERSISTENCE
+# ============================================================
+# In production systems:
+# - We select the best performing model
+# - We serialize it
+# - We store evaluation metrics for auditing
+
+import os
+import json
+import joblib
+
+
+# Create models directory if it does not exist
+os.makedirs("models", exist_ok=True)
+
+
+# Select best model automatically
+if roc_xgb > roc_logistic:
+    best_model = best_xgb
+    best_model_name = "xgboost"
+    best_roc = roc_xgb
+else:
+    best_model = best_logistic
+    best_model_name = "logistic_regression"
+    best_roc = roc_logistic
+
+
+# Save best model
+model_path = f"models/best_model_{best_model_name}.joblib"
+joblib.dump(best_model, model_path)
+
+
+# Save evaluation metadata
+metrics = {
+    "best_model": best_model_name,
+    "roc_auc": float(best_roc),
+    "logistic_roc_auc": float(roc_logistic),
+    "xgboost_roc_auc": float(roc_xgb)
+}
+
+with open("models/model_metrics.json", "w") as f:
+    json.dump(metrics, f, indent=4)
+
+
+print("\nBest model saved successfully.")
+print("Model path:", model_path)

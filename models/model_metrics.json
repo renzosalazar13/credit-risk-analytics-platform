@@ -1,0 +1,6 @@
+{
+    "best_model": "logistic_regression",
+    "roc_auc": 0.8000918623315675,
+    "logistic_roc_auc": 0.8000918623315675,
+    "xgboost_roc_auc": 0.7968110838094107
+}
