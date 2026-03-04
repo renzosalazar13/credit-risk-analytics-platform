@@ -1,133 +1,192 @@
-#Right now the project has:
-# data generation module
-# feature engineering module
-# clean git branching
-# proper staging discipline
-# raw data ignored
+# ============================================================
+# Model Training Module
+# ============================================================
+# Author: Renzo Salazar
+# Project: Credit Risk Analytics Platform
+# This script:
+# - Loads engineered dataset
+# - Builds preprocessing pipeline
+# - Trains baseline Logistic Regression
+# - Trains XGBoost model
+# - Applies Cross-Validation
+# - Applies GridSearch hyperparameter tuning
+# - Compares model performance using ROC-AUC
+#
 
-# We start building
-# data split
-# baseline logistic regression************
-# proper evaluation metrics
-# preparation for MLflow integration
 
 import pandas as pd
+import numpy as np
 
-from feature_engineering import load_raw_data, engineer_features
-
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_auc_score
+# sklearn core tools
+from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import roc_auc_score
 
+# Models
+from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
 
-
-def split_data(df: pd.DataFrame, target: str = "default"):
-    """
-    Splits dataset into train and test sets.
-    """
-
-    X = df.drop(columns=[target])
-    y = df[target]
-
-    return train_test_split(
-        X,
-        y,
-        test_size=0.3,
-        random_state=42,
-        stratify=y
-    )
+# Import preprocessing module
+from src.preprocessing import build_preprocessing_pipeline
 
 
-def train_logistic_regression(X_train, y_train):
-    """
-    Logistic Regression with scaling pipeline.
-    """
+# ============================================================
+# 1) LOAD DATA
+# ============================================================
 
-    pipeline = Pipeline([
-        ("scaler", StandardScaler()),
-        ("model", LogisticRegression(max_iter=2000))
-    ])
+df = pd.read_csv("data/raw/credit_data.csv")
 
-    pipeline.fit(X_train, y_train)
-    return pipeline
+# Separate target
+X = df.drop("default", axis=1)
+y = df["default"]
 
 
-def train_random_forest(X_train, y_train):
-    """
-    Random Forest baseline.
-    """
+# ============================================================
+# 2) TRAIN / TEST SPLIT
+# ============================================================
+# Stratify ensures class imbalance is preserved in both splits
 
-    model = RandomForestClassifier(
-        n_estimators=200,
-        max_depth=10,
-        random_state=42,
-        n_jobs=-1
-    )
-
-    model.fit(X_train, y_train)
-    return model
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
 
 
-def train_xgboost(X_train, y_train):
-    """
-    XGBoost model.
-    """
+# ============================================================
+# 3) BUILD PREPROCESSING PIPELINE
+# ============================================================
 
-    model = XGBClassifier(
-        n_estimators=300,
-        learning_rate=0.05,
-        max_depth=5,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        random_state=42,
-        use_label_encoder=False,
-        eval_metric="logloss"
-    )
-
-    model.fit(X_train, y_train)
-    return model
+preprocessor = build_preprocessing_pipeline(X_train)
 
 
-def evaluate_model(model, X_test, y_test):
-    """
-    Evaluates model using ROC-AUC.
-    """
+# ============================================================
+# 4) LOGISTIC REGRESSION PIPELINE
+# ============================================================
 
-    y_pred_proba = model.predict_proba(X_test)[:, 1]
-    return roc_auc_score(y_test, y_pred_proba)
+logistic_pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        (
+            "model",
+            LogisticRegression(
+                max_iter=2000,
+                class_weight="balanced",  # handles class imbalance
+                solver="lbfgs"
+            )
+        )
+    ]
+)
 
 
-if __name__ == "__main__":
+# ============================================================
+# 5) CROSS-VALIDATION SETUP
+# ============================================================
 
-    # Load raw dataset
-    df = load_raw_data("data/raw/credit_data.csv")
+cv = StratifiedKFold(
+    n_splits=5,
+    shuffle=True,
+    random_state=42
+)
 
-    # Feature engineering
-    df = engineer_features(df)
 
-    # Train-test split
-    X_train, X_test, y_train, y_test = split_data(df)
+# ============================================================
+# 6) GRID SEARCH FOR LOGISTIC REGRESSION
+# ============================================================
 
-    results = {}
+logistic_param_grid = {
+    "model__C": [0.01, 0.1, 1, 10],
+}
 
-    # Logistic Regression
-    log_model = train_logistic_regression(X_train, y_train)
-    results["Logistic Regression"] = evaluate_model(log_model, X_test, y_test)
+logistic_grid = GridSearchCV(
+    estimator=logistic_pipeline,
+    param_grid=logistic_param_grid,
+    cv=cv,
+    scoring="roc_auc",
+    n_jobs=-1
+)
 
-    # Random Forest
-    rf_model = train_random_forest(X_train, y_train)
-    results["Random Forest"] = evaluate_model(rf_model, X_test, y_test)
+# Fit model
+logistic_grid.fit(X_train, y_train)
 
-    # XGBoost
-    xgb_model = train_xgboost(X_train, y_train)
-    results["XGBoost"] = evaluate_model(xgb_model, X_test, y_test)
+# Best logistic model
+best_logistic = logistic_grid.best_estimator_
 
-    print("\nModel Comparison (ROC-AUC)")
-    print("-" * 35)
 
-    for model_name, auc in results.items():
-        print(f"{model_name}: {auc:.4f}")
+# ============================================================
+# 7) EVALUATE LOGISTIC MODEL
+# ============================================================
+
+y_pred_proba_log = best_logistic.predict_proba(X_test)[:, 1]
+roc_logistic = roc_auc_score(y_test, y_pred_proba_log)
+
+print("Best Logistic Regression ROC-AUC:", round(roc_logistic, 4))
+
+
+# ============================================================
+# 8) XGBOOST PIPELINE
+# ============================================================
+
+xgb_pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        (
+            "model",
+            XGBClassifier(
+                eval_metric="logloss",
+                use_label_encoder=False,
+                random_state=42
+            )
+        )
+    ]
+)
+
+
+# ============================================================
+# 9) GRID SEARCH FOR XGBOOST
+# ============================================================
+
+xgb_param_grid = {
+    "model__n_estimators": [100, 200],
+    "model__max_depth": [3, 5],
+    "model__learning_rate": [0.05, 0.1]
+}
+
+xgb_grid = GridSearchCV(
+    estimator=xgb_pipeline,
+    param_grid=xgb_param_grid,
+    cv=cv,
+    scoring="roc_auc",
+    n_jobs=-1
+)
+
+# Fit XGBoost
+xgb_grid.fit(X_train, y_train)
+
+best_xgb = xgb_grid.best_estimator_
+
+
+# ============================================================
+# 10) EVALUATE XGBOOST
+# ============================================================
+
+y_pred_proba_xgb = best_xgb.predict_proba(X_test)[:, 1]
+roc_xgb = roc_auc_score(y_test, y_pred_proba_xgb)
+
+print("Best XGBoost ROC-AUC:", round(roc_xgb, 4))
+
+
+# ============================================================
+# 11) MODEL COMPARISON
+# ============================================================
+
+print("\nModel Comparison:")
+print("Logistic Regression ROC-AUC:", round(roc_logistic, 4))
+print("XGBoost ROC-AUC:", round(roc_xgb, 4))
+
+if roc_xgb > roc_logistic:
+    print("\nXGBoost performs better.")
+else:
+    print("\nLogistic Regression performs better.")
