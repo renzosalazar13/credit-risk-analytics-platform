@@ -1,34 +1,29 @@
 # ============================================================
-# Inference Module
+# CLI Prediction Script
 # ============================================================
 # Author: Renzo Salazar
 # Project: Credit Risk Analytics Platform
 #
-# This script:
-# - Loads the best trained model
-# - Accepts JSON-style input
-# - Converts input to DataFrame
-# - Produces probabilty to default (PD)
+# This script acts as a command-line interface (CLI) for the
+# inference engine.
 #
-# This mirrors production inference behavior
+# It is responsible for:
+# - Defining a sample input payload
+# - Calling the inference engine
+# - Printing the prediction results
+#
+# The actual ML logic is implemented in `inference.py`.
+# This separation mirrors production ML systems where
+# inference logic is reusable across multiple interfaces.
+# ============================================================
 
-import joblib
-import pandas as pd
 import json
-from src.risk_engine import calculate_lgd, calculate_ead, calculate_expected_loss, credit_decision
+
+from src.inference import run_inference
 
 
 # ============================================================
-# 1) LOAD SAVED MODEL
-# ============================================================
-
-MODEL_PATH = "models/best_model_logistic_regression.joblib"
-
-model = joblib.load(MODEL_PATH)
-
-
-# ============================================================
-# 2) SAMPLE JSON INPUT (SIMULATING API REQUEST)
+# 1) SAMPLE INPUT (SIMULATING API REQUEST)
 # ============================================================
 
 sample_input = {
@@ -52,46 +47,15 @@ sample_input = {
 
 
 # ============================================================
-# 3) CONVERT JSON TO DATAFRAME
+# 2) RUN INFERENCE
 # ============================================================
 
-input_df = pd.DataFrame([sample_input])
+result = run_inference(sample_input)
 
 
 # ============================================================
-# 4) GENERATE PREDICTION
+# 3) PRINT RESULT
 # ============================================================
-
-probability_default = model.predict_proba(input_df)[:, 1][0]
-
-# ============================================================
-# 5) RISK METRICS CALCULATION
-# ============================================================
-
-# # PD -> LGD -> EAD -> Expected Loss -> Credit Decision
-
-lgd = calculate_lgd(sample_input["loan_purpose"])
-ead = calculate_ead(sample_input["loan_amount"])
-
-expected_loss = calculate_expected_loss(
-    probability_default,
-    lgd,
-    ead
-)
-
-decision = credit_decision(expected_loss)
-
-# ============================================================
-# 6) STRUCTURED OUTPUT
-# ============================================================
-
-output = {
-    "probability_of_default": round(float(probability_default), 4),
-    "LGD": lgd,
-    "EAD": ead,
-    "expected_loss": round(expected_loss, 2),
-    "decision": decision
-}
 
 print("\nPrediction Result:")
-print(json.dumps(output, indent=4))
+print(json.dumps(result, indent=4))
