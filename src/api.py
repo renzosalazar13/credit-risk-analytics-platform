@@ -7,7 +7,7 @@
 # This module exposes the ML inference engine through a
 # REST API using FastAPI.
 #
-# It validates input using Pydantic models and returns
+# It validates input using Pydantic schemas and returns
 # structured credit risk predictions.
 #
 # This architecture mirrors real production ML services.
@@ -15,38 +15,13 @@
 
 
 from fastapi import FastAPI
-from pydantic import BaseModel
 
 from src.inference import run_inference
+from src.schemas import LoanApplication
 
 
 # ============================================================
-# 1) DEFINE INPUT SCHEMA
-# ============================================================
-# Pydantic ensures incoming requests match this structure.
-
-class LoanApplication(BaseModel):
-
-    age: int
-    employment_years: int
-    employment_type: str
-    region: str
-    annual_income: float
-    current_debt: float
-    debt_to_income_ratio: float
-    credit_utilization: float
-    number_of_credit_lines: int
-    loan_amount: float
-    loan_purpose: str
-    loan_term_months: int
-    interest_rate: float
-    late_payments_last_12m: int
-    recent_credit_inquiries: int
-    account_tenure_months: int
-
-
-# ============================================================
-# 2) CREATE FASTAPI APP
+# 1) CREATE FASTAPI APP
 # ============================================================
 
 app = FastAPI(
@@ -57,17 +32,24 @@ app = FastAPI(
 
 
 # ============================================================
-# 3) HEALTH CHECK
+# 2) HEALTH CHECK ENDPOINT
 # ============================================================
+# This endpoint allows monitoring systems to verify that
+# the API service is alive and running.
 
 @app.get("/")
 def home():
-    return {"message": "Credit Risk API running"}
+
+    return {
+        "message": "Credit Risk API running"
+    }
 
 
 # ============================================================
-# 4) PREDICTION ENDPOINT
+# 3) PREDICTION ENDPOINT
 # ============================================================
+# This endpoint receives a loan application, validates the
+# request using the Pydantic schema, and runs ML inference.
 
 @app.post("/predict")
 def predict(application: LoanApplication):
@@ -75,6 +57,7 @@ def predict(application: LoanApplication):
     # Convert validated Pydantic model to dictionary
     input_data = application.dict()
 
+    # Run inference pipeline
     result = run_inference(input_data)
 
     return result
