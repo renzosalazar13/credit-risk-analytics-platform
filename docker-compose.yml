@@ -1,0 +1,39 @@
+# ============================================================
+# Docker Compose Configuration
+# ============================================================
+# Author: Renzo Salazar
+# Project: Credit Risk Analytics Platform
+#
+# This file defines the multi-container architecture used
+# in the project.
+#
+# Services included:
+# - FastAPI ML inference service
+# - PostgreSQL database
+#
+# This setup simulates a real production ML architecture
+# where APIs interact with persistent data storage.
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  api:
+    build: .
+    container_name: credit-risk-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15
+    container_name: credit-risk-db
+    restart: always
+    environment:
+      POSTGRES_USER: mluser
+      POSTGRES_PASSWORD: mlpassword
+      POSTGRES_DB: creditrisk
+    ports:
+      - "5432:5432"
