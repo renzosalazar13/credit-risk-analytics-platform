@@ -15,7 +15,7 @@
 # ============================================================
 
 import psycopg2
-
+import os
 
 # ============================================================
 # 1) DATABASE CONNECTION
@@ -23,8 +23,10 @@ import psycopg2
 
 def get_connection():
 
+    host = os.getenv("DB_HOST", "localhost")
+
     connection = psycopg2.connect(
-        host="postgres",      # IMPORTANT CHANGE
+        host=host,
         database="creditrisk",
         user="mluser",
         password="mlpassword",
@@ -39,18 +41,24 @@ def get_connection():
 
 def insert_prediction(age, income, pd, expected_loss, decision):
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    model_version = "logreg_v1"
 
-    query = """
-    INSERT INTO predictions
-    (age, income, probability_default, expected_loss, credit_decision)
-    VALUES (%s, %s, %s, %s, %s)
-    """
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
 
-    cursor.execute(query, (age, income, pd, expected_loss, decision))
+        query = """
+        INSERT INTO predictions
+        (model_version, age, income, probability_default, expected_loss, credit_decision)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
 
-    conn.commit()
+        cursor.execute(query, (model_version, age, income, pd, expected_loss, decision))
 
-    cursor.close()
-    conn.close()
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        print(f"Database error: {e}")
