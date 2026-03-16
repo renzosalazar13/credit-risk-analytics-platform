@@ -23,7 +23,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # ---------------------------------------------------
-    # 1️⃣ Fix logically impossible values
+    # 1) Fix logically impossible values
     # ---------------------------------------------------
 
     # Negative income → set to NaN
@@ -37,7 +37,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
     # ---------------------------------------------------
-    # 2️⃣ Feature engineering
+    # 2) Feature engineering
     # ---------------------------------------------------
 
     # Income per credit line (behavioral stability proxy)

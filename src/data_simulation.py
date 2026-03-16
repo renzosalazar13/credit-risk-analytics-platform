@@ -18,7 +18,7 @@ def simulate_credit_data(n_clients=50000, random_state=42):
     np.random.seed(random_state)
 
     # ===================================================
-    # 1️⃣ DEMOGRAPHIC VARIABLES
+    # 1) DEMOGRAPHIC VARIABLES
     # ===================================================
 
     age = np.random.randint(21, 70, n_clients)
@@ -42,7 +42,7 @@ def simulate_credit_data(n_clients=50000, random_state=42):
     )
 
     # ===================================================
-    # 2️⃣ FINANCIAL VARIABLES
+    # 2) FINANCIAL VARIABLES
     # ===================================================
 
     annual_income = np.random.lognormal(mean=10, sigma=0.5, size=n_clients)
@@ -71,7 +71,7 @@ def simulate_credit_data(n_clients=50000, random_state=42):
     interest_rate = np.random.uniform(0.05, 0.35, n_clients)
 
     # ===================================================
-    # 3️⃣ BEHAVIORAL VARIABLES
+    # 3) BEHAVIORAL VARIABLES
     # ===================================================
 
     late_payments_last_12m = np.random.poisson(1.5, n_clients)
@@ -81,7 +81,7 @@ def simulate_credit_data(n_clients=50000, random_state=42):
     account_tenure_months = np.random.randint(3, 240, n_clients)
 
     # ===================================================
-    # 4️⃣ MISSING VALUES (Realistic Data Imperfections)
+    # 4) MISSING VALUES (Realistic Data Imperfections)
     # ===================================================
 
     annual_income[
@@ -97,7 +97,7 @@ def simulate_credit_data(n_clients=50000, random_state=42):
     ] = np.nan
 
     # ===================================================
-    # 5️⃣ DIRTY / IMPOSSIBLE VALUES
+    # 5) DIRTY / IMPOSSIBLE VALUES
     # ===================================================
 
     # Negative income (data error)
@@ -116,7 +116,7 @@ def simulate_credit_data(n_clients=50000, random_state=42):
     ] = 5
 
     # ===================================================
-    # 6️⃣ DEFAULT LOGIC (More Complex & Realistic)
+    # 6) DEFAULT LOGIC (More Complex & Realistic)
     # ===================================================
 
     z = (
@@ -142,7 +142,7 @@ def simulate_credit_data(n_clients=50000, random_state=42):
     default = np.random.binomial(1, probability_default)
 
     # ===================================================
-    # 7️⃣ FINAL DATAFRAME
+    # 7) FINAL DATAFRAME
     # ===================================================
 
     df = pd.DataFrame({
